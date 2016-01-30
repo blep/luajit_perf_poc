@@ -1,0 +1,3 @@
+[submodule "thirdparty/luajit-rocks"]
+	path = thirdparty/luajit-rocks
+	url = https://github.com/torch/luajit-rocks.git

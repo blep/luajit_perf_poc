@@ -1,0 +1,28 @@
+* 			text=auto
+*.java		text eol=lf
+*.txt		text
+*.json		text
+*.csv		text
+*.vcproj	eol=crlf
+*.sln	eol=crlf
+*.bat		eol=crlf
+*.sh		eol=lf
+*.py		eol=lf
+*.cpp		eol=lf
+*.cc		eol=lf
+*.cxx		eol=lf
+*.c++		eol=lf
+*.h		eol=lf
+*.mm		text eol=native
+*.hpp		-text
+*.png		-text
+*.dds		-text
+*.pdb		-text
+*.exe		-text
+*.dll		-text
+*.DLL		-text
+*.lib		-text
+*.chm		-text
+*.bin		-text
+*.hxs	-text
+*.rtf	-text

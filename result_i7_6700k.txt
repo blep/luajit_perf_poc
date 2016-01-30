@@ -1,0 +1,51 @@
+C++: 100000000 loops in 0.121s = 829678695.5 operation/s
+Loading e:\prg\prj\infracpp\luajit_perf_poc\src\luajit_poc\bench.lua
+Application: 	{
+  createVector2D = <function 1>,
+  destroyVector2D = <function 2>,
+  now = <function 3>,
+  printFFIV2 = <function 4>,
+  sayHello = <function 5>
+}	
+
+Vector2D: 	{
+  set = <function 1>,
+  x = <function 2>,
+  y = <function 3>,
+  <metatable> = {
+    __call = <function 4>
+  }
+}	
+
+require: 	<function 1>	
+
+ffi: 	nil	
+
+package.path: 	".\\?.lua;e:\\prg\\prj\\build\\infracpp\\luajit_perf_poc_vs2015_64\\bin\\Release\\lua\\?.lua;e:\\prg\\prj\\build\\infracpp\\luajit_perf_poc_vs2015_64\\bin\\Release\\lua\\?\\init.lua;;E:/prg/prj/infracpp/luajit_perf_poc/src/luajit_poc/?.lua;E:/prg/prj/infracpp/luajit_perf_poc/src/luajit_poc/?/init.lua"	
+
+Running Lua 5.1
+my_function() returned 123
+Hello World!
+Vector2D.x(v1) = 1
+Vector2D.y(v1) = 1
+Vector2D.x(v1) = 12
+Vector2D.y(v1) = 21
+Vector2D.x(v2) = 7
+Vector2D.y(v2) = 9
+Vector2D.x(v3) = 19
+Vector2D.y(v3) = 30
+v1.x = 7
+v1.y = 9
+Vector2D.x(v1) = 100000000
+Vector2D.y(v1) = 100000000
+Vector2D.set * 100,000,000.00 in 2.216s = 45,121,009.86 operation/s; post GC time = 0.000045s
+Vector2D.x(v1) = 100000000
+Vector2D.y(v1) = 100000000
+Vector2D_set * 100,000,000.00 in 2.234s = 44,760,360.72 operation/s; post GC time = 0.000037s
+v1.x = 100000000
+v1.y = 100000000
+setLuaV2 (ffi struct) * 100,000,000.00 in 0.048s = 2,084,885,052.47 operation/s; post GC time = 0.000037s
+sum: x=10000001, y=10000001
+Application.create/sum/DestroyVector2D * 10,000,000.00 in 1.310s = 7,631,665.20 operation/s; post GC time = 0.000037s
+sum: x=10000001, y=10000001
+LuaV2Create/sum/Destroy (ffi struct) * 10,000,000.00 in 0.002s = 4,057,280,688.76 operation/s; post GC time = 0.000035s
