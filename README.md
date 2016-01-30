@@ -23,6 +23,8 @@ luajit is retrieve from luarocks git repository as a sub-module, so make sure to
 
 # Measure
 
+See src/luajit_poc/bench.lua for bench code.
+
 Rough performance measured on Intel Core i7-6700K CPU @ 4.00GHz running on Windows 10 64 bits, compiled with Visual Studio 2015 in 64 bits with luajit 2.1.
 Notes that this is an ideal setup, no icode cache pressure... Just some simple measurement to get a rough idea of where we stand.
 
@@ -49,7 +51,20 @@ Using LUA JIT ffi metatype struct for Vector2D:
 - LuaV2Create/sum/Destroy (ffi struct) * 10,000,000.00 in 0.002s = 4,057,280,688.76 operation/s
 The LUA JIT Allocation/Sinking optimization is clearly triggered and got ride of the struct allocation. Performance is comparable with what you could get in fullly inlined C++. Since is this a 4GHz processor, we're basically at 1 cycle per iteration...
 
+3) Pass a Vector2D to the Application
+
+Call to A C LUA Binding, passing a Vector2D lightuserdata: (nothing new, comparable to previous LUA C binding performance)
+- Application_setOrigin * 100,000,000.00 in 1.879s = 53,219,384.30 operation/s
+
+Call C function export by DLL passing a pointer on ffi Vector2D struct:
+- ffi_c_Application_setOrigin * 100,000,000.00 in 0.122s = 821,501,223.82 operation/s
+=> This show a reduction of the C/LUA language barrier by a magnitude, comparable to the cost of a non-inlined function call in C++.
+
 # Conclusion
-LUA FFI is clearly very interesting to optimize away temporary allocation of vector objects. To be investigated further (interop with C of ffi metatype).
+LUA FFI is clearly very interesting to optimize away temporary allocation of vector objects. 
+
+LUA FFI function call overhead to C is ~10 times smaller.
+
+To be investigated: are FFI function call parameters  (struct Vector2D) allocated on the stack?
 
 Baptiste Lepilleur.

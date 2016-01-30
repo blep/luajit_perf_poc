@@ -81,8 +81,22 @@ end
 -- FFI metatype can be used to avoid the function call and allocation
 -- See http://wiki.luajit.org/Allocation-Sinking-Optimization
 local ffi = require("ffi")
-local LuaV2
-LuaV2 = ffi.metatype("struct { int x, y; }", {
+ffi.cdef( [[
+typedef struct CVector2
+{
+    int x;
+    int y;
+} CVector2;
+
+void c_Application_setOrigin( struct CVector2 *newOrigin );
+struct CVector2 c_Application_getOrigin();
+
+  ]] )
+  
+
+local LuaV2 = ffi.typeof ('CVector2')
+
+LuaV2 = ffi.metatype(LuaV2, {
   __add = function(a, b)
    return LuaV2(a.x + b.x, a.y + b.y)
   end
@@ -92,6 +106,10 @@ function setLuaV2(v, x, y)
   v.x = x
   v.y = y
 end
+
+local poclib = ffi.load( "luajit_poc" )
+poclib.c_Application_setOrigin( LuaV2(7,13) )
+
 
 function bench_setLuaV2FFI()
   local v1 = LuaV2(15, 12)
@@ -137,6 +155,32 @@ function bench_LuaV2CreateSumDestroy()
   return "LuaV2Create/sum/Destroy (ffi struct)", nbCreateLoop
 end
 
+local nbSetOriginLoop = 1000*1000*100
+
+function bench_Application_setOrigin()
+  local v1 = Application.createVector2D()
+  Vector2D.set(v1, 7, 13 )
+  local Application_setOrigin = Application.setOrigin
+  for i=1,nbSetOriginLoop do
+    Application_setOrigin(v1)
+  end
+  local origin = Application.getOrigin()
+  io.write( "Application.getOrigin().x = ", Vector2D.x(origin), "\n" )
+  io.write( "Application.getOrigin().y = ", Vector2D.y(origin), "\n" )
+  return "Application_setOrigin", nbSetOriginLoop
+end
+
+function bench_ffi_Application_setOrigin()
+  local v1 = LuaV2(7,13)
+  for i=1,nbSetOriginLoop do
+    poclib.c_Application_setOrigin( v1 )
+  end
+  local origin = Application.getOrigin()
+  io.write( "Application.getOrigin().x = ", Vector2D.x(origin), "\n" )
+  io.write( "Application.getOrigin().y = ", Vector2D.y(origin), "\n" )
+  return "ffi_c_Application_setOrigin", nbSetOriginLoop
+end
+
 timeIt( bench_Vector2D_dot_set )
 timeIt( bench_Vector2D_set )
 timeIt( bench_setLuaV2FFI )
@@ -146,3 +190,6 @@ timeIt( bench_setLuaV2FFI )
 
 timeIt( bench_createSumDestroyVector2D )
 timeIt( bench_LuaV2CreateSumDestroy )
+
+timeIt( bench_Application_setOrigin )
+timeIt( bench_ffi_Application_setOrigin )

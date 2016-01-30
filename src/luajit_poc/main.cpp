@@ -1,3 +1,4 @@
+#include "main.hpp"
 #include <lua.hpp>
 #include <iostream>
 #include <stdint.h>
@@ -20,6 +21,35 @@ int my_function( lua_State *L )
     return 1; // number of return values
 }
 
+
+
+struct TypedLightUserObject
+{
+    static const uint32_t INVALID_TYPE_TAG = 0;
+    static const uint32_t STALE_TYPE_TAG = 0xfeca9731;
+
+    /** Tags should always be complex value
+    */
+    uint32_t typeTag_;
+
+    TypedLightUserObject( uint32_t typeTag )
+        : typeTag_( typeTag )
+    {
+    }
+};
+
+struct Vector2DLUO : TypedLightUserObject
+{
+    static const uint32_t TYPE_TAG = 0x45323789;
+    int x_;
+    int y_;
+
+    Vector2DLUO() : TypedLightUserObject( TYPE_TAG )
+    {
+    }
+};
+
+
 int clua_Application_sayHello( lua_State *L )
 {
     printf( "Hello World!\n" );
@@ -39,44 +69,61 @@ int clua_Application_now( lua_State *L )
     return 1;
 }
 
-struct LuaV2
+
+struct Vector2
 {
     int x_;
     int y_;
 };
 
-int clua_Application_printFFIV2( lua_State *L )
+static Vector2 appOrigin = {0,0};
+
+int clua_Application_setOrigin( lua_State *L )
 {
-    LuaV2 *v = static_cast<LuaV2 *>( lua_touserdata(L, 1 ) );
-    printf( "FFIV2(x,y) = (%d, %d)\n", v->x_, v->y_ );
+    int n = lua_gettop( L ); // number of parameters
+    if (n != 1)
+    {
+        printf( "1 parameters required, %d provided", n );
+        abort();
+    }
+
+    TypedLightUserObject *tluo = static_cast<TypedLightUserObject *>( lua_touserdata( L, 1 ) );
+    if (tluo == NULL || tluo->typeTag_ != Vector2DLUO::TYPE_TAG)
+    {
+        printf( "parameter 1 is not a Vector2D!" );
+        abort();
+    }
+
+    Vector2DLUO *entity = static_cast<Vector2DLUO *>( tluo );
+    appOrigin.x_ = entity->x_;
+    appOrigin.y_ = entity->y_;
     return 0;
 }
 
-struct TypedLightUserObject
+int clua_Application_getOrigin( lua_State *L )
 {
-    static const uint32_t INVALID_TYPE_TAG = 0;
-    static const uint32_t STALE_TYPE_TAG = 0xfeca9731;
+    Vector2DLUO *obj = new Vector2DLUO();
+    obj->x_ = appOrigin.x_;
+    obj->y_ = appOrigin.y_;
+    lua_pushlightuserdata( L, obj );
+    return 1;
+}
 
-    /** Tags should always be complex value
-     */
-    uint32_t typeTag_;
+extern "C" {
 
-    TypedLightUserObject( uint32_t typeTag )
-        : typeTag_( typeTag )
-    {
-    }
-};
-
-struct Vector2DLUO : TypedLightUserObject
+LUAJITPOC_API void c_Application_setOrigin( struct Vector2 *newOrigin )
 {
-    static const uint32_t TYPE_TAG = 0x45323789;
-    int x_;
-    int y_;
+    appOrigin.x_ = newOrigin->x_;
+    appOrigin.y_ = newOrigin->y_;
+}
 
-    Vector2DLUO() : TypedLightUserObject( TYPE_TAG )
-    {
-    }
-};
+LUAJITPOC_API struct Vector2 c_Application_getOrigin()
+{
+    return appOrigin;
+}
+
+}
+
 
 int tluo_Vector2D_call( lua_State *L )
 {
@@ -115,7 +162,7 @@ int clua_Application_destroyVector2D( lua_State *L )
     TypedLightUserObject *tluo = static_cast<TypedLightUserObject *>( lua_touserdata( L, 1 ) );
     if (tluo == NULL || tluo->typeTag_ != Vector2DLUO::TYPE_TAG)
     {
-        printf( "parameter 1 is not an Entity!" );
+        printf( "parameter 1 is not a Vector2D!" );
         abort();
     }
 
@@ -138,7 +185,7 @@ int tluo_Vector2D_set( lua_State *L )
     TypedLightUserObject *tluo = static_cast<TypedLightUserObject *>( lua_touserdata( L, 1 ) );
     if (tluo == NULL  ||  tluo->typeTag_ != Vector2DLUO::TYPE_TAG )
     {
-        printf("parameter 1 is not an Entity!" );
+        printf("parameter 1 is not a Vector2D!" );
         abort();
     }
 
@@ -160,7 +207,7 @@ int tluo_Vector2D_x( lua_State *L )
     TypedLightUserObject *tluo = static_cast<TypedLightUserObject *>( lua_touserdata( L, 1 ) );
     if (tluo == NULL || tluo->typeTag_ != Vector2DLUO::TYPE_TAG)
     {
-        printf( "parameter 1 is not an Entity!" );
+        printf( "parameter 1 is not a Vector2D!" );
         abort();
     }
 
@@ -181,7 +228,7 @@ int tluo_Vector2D_y( lua_State *L )
     TypedLightUserObject *tluo = static_cast<TypedLightUserObject *>( lua_touserdata( L, 1 ) );
     if (tluo == NULL || tluo->typeTag_ != Vector2DLUO::TYPE_TAG)
     {
-        printf( "parameter 1 is not an Entity!" );
+        printf( "parameter 1 is not a Vector2D!" );
         abort();
     }
 
@@ -203,13 +250,13 @@ int tluo_meta_add( lua_State *L )
     TypedLightUserObject *tluo1 = static_cast<TypedLightUserObject *>( lua_touserdata( L, 1 ) );
     if (tluo1 == NULL || tluo1->typeTag_ != Vector2DLUO::TYPE_TAG)
     {
-        printf( "parameter 1 is not an Entity!" );
+        printf( "parameter 1 is not a Vector2D!" );
         abort();
     }
     TypedLightUserObject *tluo2 = static_cast<TypedLightUserObject *>( lua_touserdata( L, 2 ) );
     if (tluo2 == NULL || tluo2->typeTag_ != Vector2DLUO::TYPE_TAG)
     {
-        printf( "parameter 1 is not an Entity!" );
+        printf( "parameter 1 is not a Vector2D!" );
         abort();
     }
 
@@ -369,7 +416,7 @@ static void benchcpp( BenchCppFn func )
 }
 
 
-int main( int argc, char** argv )
+int lib_main( int argc, char** argv )
 {
     BenchCppFn benchCppFn = argc > 1 ? cppbench_set_vector : cppbench_add_to_vector;
     benchcpp( benchCppFn );
@@ -412,9 +459,11 @@ int main( int argc, char** argv )
 
         set_module_function( L, "Application", "sayHello", &clua_Application_sayHello );
         set_module_function( L, "Application", "now", &clua_Application_now );
-        set_module_function( L, "Application", "printFFIV2", &clua_Application_printFFIV2 );
+        set_module_function( L, "Application", "getOrigin", &clua_Application_getOrigin );
+        set_module_function( L, "Application", "setOrigin", &clua_Application_setOrigin );
         set_module_function( L, "Application", "createVector2D", &clua_Application_createVector2D );
         set_module_function( L, "Application", "destroyVector2D", &clua_Application_destroyVector2D );
+        set_module_function( L, "Application", "setOrigine", &clua_Application_setOrigin );
         // Makes Vector2D callable, allowing new instance to be created using "Vector2D(x,y)"
         // Notes this means that on the C++ side there is no "parent" object
         set_module_meta_function( L, "Vector2D", "__call", &tluo_Vector2D_call );
