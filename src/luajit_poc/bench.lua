@@ -44,14 +44,17 @@ end
 
 
 function timeIt( func, ... )
+  collectgarbage("stop")
+  local kbInUseBefore = collectgarbage("count")
   start = Application.now()
   what, nbLoop = func(...)
   elapsed = Application.now() - start
   
-  startGC = Application.now()
+  io.write( string.format("%s * %s in %.3fs = %s operation/s", what, format_thousand_sep(nbLoop), elapsed, format_thousand_sep(nbLoop/elapsed)) )
+  local kbInUseAfter = collectgarbage("count")
+  local kbInUseAfter = collectgarbage("restart")
+  io.write( string.format("Memory in use before: %d KiB, after: %d KiB, delta: %d KiB\n", kbInUseBefore, kbInUseAfter, kbInUseAfter-kbInUseBefore) )
   collectgarbage()
-  elapsedGC = Application.now() - startGC
-  print( string.format("%s * %s in %.3fs = %s operation/s; post GC time = %fs", what, format_thousand_sep(nbLoop), elapsed, format_thousand_sep(nbLoop/elapsed), elapsedGC ) )
 end
 
 local nbSetLoop = 1000*1000*100

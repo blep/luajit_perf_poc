@@ -416,16 +416,70 @@ static void benchcpp( BenchCppFn func )
 }
 
 
+struct CustomAllocState
+{
+    int64_t allocatedBytes_;
+    int64_t maxAllocatedBytes_;
+    int64_t allocatedObjects_;
+    int64_t totalAllocCall_;
+    int64_t totalFreeCall_;
+};
+
+
+CustomAllocState customAllocState = {0,0};
+
+static void *
+custom_lua_alloc( void *userData, void *ptr, size_t osize, size_t nsize )
+{
+    CustomAllocState *state = static_cast<CustomAllocState *>( userData );
+    state->allocatedBytes_ += -static_cast<int64_t>(osize) + static_cast<int64_t>( nsize );
+    if (state->allocatedBytes_ > state->maxAllocatedBytes_ )
+        state->maxAllocatedBytes_ = state->allocatedBytes_;
+    if ( nsize == 0 )
+    {
+        --( state->allocatedObjects_ );
+        state->totalFreeCall_ += 1;
+        free( ptr );
+        return NULL;
+    }
+    else
+    {
+        state->totalAllocCall_ += 1;
+        state->allocatedObjects_ += static_cast<int64_t>( ( osize != 0 ) ? 0 : 1 );
+        return realloc( ptr, nsize );
+    }
+}
+
+static int panic( lua_State*L )
+{
+    fprintf( stderr, "PANIC: unprotected error in call to Lua API (%s)\n",
+             lua_tostring( L, -1 ) );
+    return 0;
+}
+
+
+
 int lib_main( int argc, char** argv )
 {
     BenchCppFn benchCppFn = argc > 1 ? cppbench_set_vector : cppbench_add_to_vector;
     benchcpp( benchCppFn );
 
-    //for (int n = 1; n<argc; ++n)
-    //{
-    //    const char* file = argv[ n ];
-
+#if !defined(NDEBUG) &&  !defined(_WIN64) /* debug & 32bits only */
+# define LUAPOC_USE_CUSTOM_ALLOC 1
+#else
+# undef LUAPOC_USE_CUSTOM_ALLOC
+#endif
+#if defined(LUAPOC_USE_CUSTOM_ALLOC)
+        // Doesn't work with LUA JIT 64 bits:
+        // See: https://gist.github.com/nddrylliog/8722197
+        lua_State *L = lua_newstate( custom_lua_alloc, &customAllocState );
+        if (L != NULL)
+        {
+            lua_atpanic( L, &panic );
+        }
+#else
         lua_State *L = lua_open();
+#endif
 
     //    lua_pushlightuserdata( L, (void *)wrap_exceptions );
 /*        static const luaL_Reg lj_lib_load[] = {
@@ -492,8 +546,15 @@ int lib_main( int argc, char** argv )
             }
         }
 
+        // Force a full GC
+        lua_gc( L, LUA_GCCOLLECT, 0 );
 
         lua_close( L );
-    //}
+#if defined(LUAPOC_USE_CUSTOM_ALLOC)
+        printf( "\nCustom Alloc Report:\n" );
+        printf( "Bytes currently allocated on heap: 0x%llx bytes, max 0x%llx bytes\n", customAllocState.allocatedBytes_, customAllocState.maxAllocatedBytes_ );
+        printf( "Number of object currently allocated: %lld\n", customAllocState.allocatedObjects_ );
+        printf( "#calls: alloc: %lld, free: %lld (maynot be balanced due to realloc)\n", customAllocState.totalAllocCall_, customAllocState.totalFreeCall_ );
+#endif
     return 0;
 }
