@@ -1,11 +1,13 @@
-C++: 100000000 loops in 0.121s = 829678695.5 operation/s
-Loading e:\prg\prj\infracpp\luajit_perf_poc\src\luajit_poc\bench.lua
+C++: 100000000 loops in 0.145s = 688588700.5 operation/s
+Loading E:/prg/prj/infracpp/luajit_perf_poc/src/luajit_poc/bench.lua
 Application: 	{
   createVector2D = <function 1>,
   destroyVector2D = <function 2>,
-  now = <function 3>,
-  printFFIV2 = <function 4>,
-  sayHello = <function 5>
+  getOrigin = <function 3>,
+  now = <function 4>,
+  sayHello = <function 5>,
+  setOrigin = <function 6>,
+  setOrigine = <function 7>
 }	
 
 Vector2D: 	{
@@ -36,16 +38,35 @@ Vector2D.x(v3) = 19
 Vector2D.y(v3) = 30
 v1.x = 7
 v1.y = 9
+1: test1
+2: test2
 Vector2D.x(v1) = 100000000
 Vector2D.y(v1) = 100000000
-Vector2D.set * 100,000,000.00 in 2.216s = 45,121,009.86 operation/s; post GC time = 0.000045s
+Vector2D.set * 100,000,000.00 in 2.270s = 44,057,076.44 operation/s
+Memory in use before: 98 KiB, after: 0 KiB, delta: -98 KiB
 Vector2D.x(v1) = 100000000
 Vector2D.y(v1) = 100000000
-Vector2D_set * 100,000,000.00 in 2.234s = 44,760,360.72 operation/s; post GC time = 0.000037s
+Vector2D_set * 100,000,000.00 in 2.255s = 44,349,976.10 operation/s
+Memory in use before: 64 KiB, after: 0 KiB, delta: -64 KiB
 v1.x = 100000000
 v1.y = 100000000
-setLuaV2 (ffi struct) * 100,000,000.00 in 0.048s = 2,084,885,052.47 operation/s; post GC time = 0.000037s
+setLuaV2 (ffi struct) * 100,000,000.00 in 0.049s = 2,047,781,961.35 operation/s
+Memory in use before: 64 KiB, after: 0 KiB, delta: -64 KiB
 sum: x=10000001, y=10000001
-Application.create/sum/DestroyVector2D * 10,000,000.00 in 1.310s = 7,631,665.20 operation/s; post GC time = 0.000037s
+Application.create/sum/DestroyVector2D * 10,000,000.00 in 1.312s = 7,620,322.65 operation/s
+Memory in use before: 65 KiB, after: 0 KiB, delta: -65 KiB
 sum: x=10000001, y=10000001
-LuaV2Create/sum/Destroy (ffi struct) * 10,000,000.00 in 0.002s = 4,057,280,688.76 operation/s; post GC time = 0.000035s
+LuaV2Create/sum/Destroy (ffi struct) * 10,000,000.00 in 0.003s = 3,977,713,665.87 operation/s
+Memory in use before: 65 KiB, after: 0 KiB, delta: -65 KiB
+Application.getOrigin().x = 7
+Application.getOrigin().y = 13
+Application_setOrigin * 100,000,000.00 in 1.883s = 53,118,700.83 operation/s
+Memory in use before: 66 KiB, after: 0 KiB, delta: -66 KiB
+Application.getOrigin().x = 7
+Application.getOrigin().y = 13
+ffi_c_Application_setOrigin * 100,000,000.00 in 0.098s = 1,023,475,990.77 operation/s
+Memory in use before: 66 KiB, after: 0 KiB, delta: -66 KiB
+testApi.getOrigin().x = 7
+testApi.getOrigin().y = 13
+bench_ffi_setOrigin_via_TestApi * 100,000,000.00 in 0.120s = 832,537,968.19 operation/s
+Memory in use before: 67 KiB, after: 0 KiB, delta: -67 KiB

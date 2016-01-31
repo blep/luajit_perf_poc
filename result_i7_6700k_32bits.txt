@@ -1,4 +1,4 @@
-C++: 100000000 loops in 0.225s = 445079479.9 operation/s
+C++: 100000000 loops in 0.223s = 447574860.6 operation/s
 Loading E:/prg/prj/infracpp/luajit_perf_poc/src/luajit_poc/bench.lua
 Application: 	{
   createVector2D = <function 1>,
@@ -38,22 +38,35 @@ Vector2D.x(v3) = 19
 Vector2D.y(v3) = 30
 v1.x = 7
 v1.y = 9
+1: test1
+2: test2
 Vector2D.x(v1) = 100000000
 Vector2D.y(v1) = 100000000
-Vector2D.set * 100,000,000.00 in 2.230s = 44,851,959.06 operation/s; post GC time = 0.000041s
+Vector2D.set * 100,000,000.00 in 2.220s = 45,054,389.49 operation/s
+Memory in use before: 65 KiB, after: 0 KiB, delta: -65 KiB
 Vector2D.x(v1) = 100000000
 Vector2D.y(v1) = 100000000
-Vector2D_set * 100,000,000.00 in 2.075s = 48,197,507.80 operation/s; post GC time = 0.000041s
+Vector2D_set * 100,000,000.00 in 2.052s = 48,736,970.18 operation/s
+Memory in use before: 59 KiB, after: 0 KiB, delta: -59 KiB
 v1.x = 100000000
 v1.y = 100000000
-setLuaV2 (ffi struct) * 100,000,000.00 in 0.049s = 2,054,834,322.41 operation/s; post GC time = 0.000039s
+setLuaV2 (ffi struct) * 100,000,000.00 in 0.048s = 2,082,073,418.66 operation/s
+Memory in use before: 59 KiB, after: 0 KiB, delta: -59 KiB
 sum: x=10000001, y=10000001
-Application.create/sum/DestroyVector2D * 10,000,000.00 in 1.491s = 6,707,879.24 operation/s; post GC time = 0.000039s
+Application.create/sum/DestroyVector2D * 10,000,000.00 in 1.467s = 6,816,968.84 operation/s
+Memory in use before: 60 KiB, after: 0 KiB, delta: -60 KiB
 sum: x=10000001, y=10000001
-LuaV2Create/sum/Destroy (ffi struct) * 10,000,000.00 in 0.002s = 4,071,216,984.47 operation/s; post GC time = 0.000032s
+LuaV2Create/sum/Destroy (ffi struct) * 10,000,000.00 in 0.002s = 4,052,670,121.97 operation/s
+Memory in use before: 60 KiB, after: 0 KiB, delta: -60 KiB
 Application.getOrigin().x = 7
 Application.getOrigin().y = 13
-Application_setOrigin * 100,000,000.00 in 1.469s = 68,081,362.24 operation/s; post GC time = 0.000040s
+Application_setOrigin * 100,000,000.00 in 1.448s = 69,048,394.41 operation/s
+Memory in use before: 61 KiB, after: 0 KiB, delta: -61 KiB
 Application.getOrigin().x = 7
 Application.getOrigin().y = 13
-ffi_c_Application_setOrigin * 100,000,000.00 in 0.121s = 828,446,273.54 operation/s; post GC time = 0.000039s
+ffi_c_Application_setOrigin * 100,000,000.00 in 0.129s = 772,627,483.32 operation/s
+Memory in use before: 61 KiB, after: 0 KiB, delta: -61 KiB
+testApi.getOrigin().x = 7
+testApi.getOrigin().y = 13
+bench_ffi_setOrigin_via_TestApi * 100,000,000.00 in 0.134s = 746,714,629.24 operation/s
+Memory in use before: 62 KiB, after: 0 KiB, delta: -62 KiB

@@ -50,7 +50,7 @@ function timeIt( func, ... )
   what, nbLoop = func(...)
   elapsed = Application.now() - start
   
-  io.write( string.format("%s * %s in %.3fs = %s operation/s", what, format_thousand_sep(nbLoop), elapsed, format_thousand_sep(nbLoop/elapsed)) )
+  io.write( string.format("%s * %s in %.3fs = %s operation/s\n", what, format_thousand_sep(nbLoop), elapsed, format_thousand_sep(nbLoop/elapsed)) )
   local kbInUseAfter = collectgarbage("count")
   local kbInUseAfter = collectgarbage("restart")
   io.write( string.format("Memory in use before: %d KiB, after: %d KiB, delta: %d KiB\n", kbInUseBefore, kbInUseAfter, kbInUseAfter-kbInUseBefore) )
@@ -94,6 +94,16 @@ typedef struct CVector2
 void c_Application_setOrigin( struct CVector2 *newOrigin );
 struct CVector2 c_Application_getOrigin();
 
+struct TestApi
+{
+    int( *doPrint1 )( const char *what );
+    int( *doPrint2 )( const char *what );
+    struct CVector2 (*getOrigin)();
+    void (*setOrigin)( struct CVector2 *newOrigin );
+};
+
+struct TestApi *c_Application_getApi();
+
   ]] )
   
 
@@ -112,6 +122,7 @@ end
 
 local poclib = ffi.load( "luajit_poc" )
 poclib.c_Application_setOrigin( LuaV2(7,13) )
+local testApi = poclib.c_Application_getApi()
 
 
 function bench_setLuaV2FFI()
@@ -130,6 +141,8 @@ setLuaV2( v1, 7, 9 )
 io.write( "v1.x = ", v1.x, "\n" )
 io.write( "v1.y = ", v1.y, "\n" )
 -- Application.printFFIV2( v1 )
+testApi.doPrint1( "test1" )
+testApi.doPrint2( "test2" )
 
 local nbCreateLoop = 1000*1000*10
 
@@ -184,6 +197,18 @@ function bench_ffi_Application_setOrigin()
   return "ffi_c_Application_setOrigin", nbSetOriginLoop
 end
 
+function bench_ffi_setOrigin_via_TestApi()
+  local testApi = poclib.c_Application_getApi()
+  local v1 = LuaV2(7,13)
+  for i=1,nbSetOriginLoop do
+    testApi.setOrigin( v1 )
+  end
+  local origin = testApi.getOrigin()
+  io.write( "testApi.getOrigin().x = ", origin.x, "\n" )
+  io.write( "testApi.getOrigin().y = ", origin.y, "\n" )
+  return "bench_ffi_setOrigin_via_TestApi", nbSetOriginLoop
+end
+
 timeIt( bench_Vector2D_dot_set )
 timeIt( bench_Vector2D_set )
 timeIt( bench_setLuaV2FFI )
@@ -196,3 +221,5 @@ timeIt( bench_LuaV2CreateSumDestroy )
 
 timeIt( bench_Application_setOrigin )
 timeIt( bench_ffi_Application_setOrigin )
+timeIt( bench_ffi_setOrigin_via_TestApi )
+

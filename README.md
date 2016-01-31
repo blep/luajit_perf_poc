@@ -67,6 +67,11 @@ Call C function export by DLL passing a pointer on ffi Vector2D struct:
 - ffi_c_Application_setOrigin * 100,000,000.00 in 0.121s = 828,446,273.54 operation/s [32bits]
 => This show a reduction of the C/LUA language barrier by a magnitude, comparable to the cost of a non-inlined function call in C++.
 
+Call C function pointer from a struct returned by another C function exporedt by DLL passing a pointer on ffi Vector2D struct:
+- bench_ffi_setOrigin_via_TestApi * 100,000,000.00 in 0.120s = 832,537,968.19 operation/s [64bits]
+- bench_ffi_setOrigin_via_TestApi * 100,000,000.00 in 0.134s = 746,714,629.24 operation/s [32bits]
+=> Fairly similar to directly calling a C function (delta within noise of measurement).
+
 # Conclusion
 LUA FFI is clearly very interesting to optimize away temporary allocation of vector objects. 
 

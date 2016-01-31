@@ -111,6 +111,27 @@ int clua_Application_getOrigin( lua_State *L )
 
 extern "C" {
 
+struct TestApi
+{
+    int( *doPrint1 )( const char *what );
+    int( *doPrint2 )( const char *what );
+    struct Vector2 (*getOrigin)();
+    void (*setOrigin)( struct Vector2 *newOrigin );
+};
+
+static int c_TestApi_doPrint1( const char *what )
+{
+    printf( "1: %s\n", what );
+    return 1234;
+}
+
+static int c_TestApi_doPrint2( const char *what )
+{
+    printf( "2: %s\n", what );
+    return 1234;
+}
+
+
 LUAJITPOC_API void c_Application_setOrigin( struct Vector2 *newOrigin )
 {
     appOrigin.x_ = newOrigin->x_;
@@ -120,6 +141,13 @@ LUAJITPOC_API void c_Application_setOrigin( struct Vector2 *newOrigin )
 LUAJITPOC_API struct Vector2 c_Application_getOrigin()
 {
     return appOrigin;
+}
+
+static TestApi testApi = { &c_TestApi_doPrint1, &c_TestApi_doPrint2, c_Application_getOrigin, c_Application_setOrigin };
+
+LUAJITPOC_API struct TestApi *c_Application_getApi()
+{
+    return &testApi;
 }
 
 }
