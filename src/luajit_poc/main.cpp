@@ -443,19 +443,217 @@ static void benchcpp( BenchCppFn func )
     printf( "C++: %d loops in %.3fs = %.1f operation/s\n", nbLoop, elapsedSeconds, nbLoop/elapsedSeconds );
 }
 
+#include <unordered_map>
+#include <vector>
+
+/// Implementation of the 64 bit MurmurHash2 function
+/// http://murmurhash.googlepages.com/
+static uint64_t murmur_hash_64( const void * key, uint32_t len, uint64_t seed=0 )
+{
+    const uint64_t m = 0xc6a4a7935bd1e995ULL;
+    const uint32_t r = 47;
+
+    uint64_t h = seed ^ ( len * m );
+
+    const uint64_t * data = (const uint64_t *)key;
+    const uint64_t * end = data + ( len / 8 );
+
+    while (data != end)
+    {
+#ifdef PLATFORM_BIG_ENDIAN
+        uint64 k = *data++;
+        char *p = (char *)&k;
+        char c;
+        c = p[ 0 ]; p[ 0 ] = p[ 7 ]; p[ 7 ] = c;
+        c = p[ 1 ]; p[ 1 ] = p[ 6 ]; p[ 6 ] = c;
+        c = p[ 2 ]; p[ 2 ] = p[ 5 ]; p[ 5 ] = c;
+        c = p[ 3 ]; p[ 3 ] = p[ 4 ]; p[ 4 ] = c;
+#else
+        uint64_t k = *data++;
+#endif
+
+        k *= m;
+        k ^= k >> r;
+        k *= m;
+
+        h ^= k;
+        h *= m;
+    }
+
+    const unsigned char * data2 = (const unsigned char*)data;
+
+    switch (len & 7)
+    {
+    case 7: h ^= uint64_t( data2[ 6 ] ) << 48;
+    case 6: h ^= uint64_t( data2[ 5 ] ) << 40;
+    case 5: h ^= uint64_t( data2[ 4 ] ) << 32;
+    case 4: h ^= uint64_t( data2[ 3 ] ) << 24;
+    case 3: h ^= uint64_t( data2[ 2 ] ) << 16;
+    case 2: h ^= uint64_t( data2[ 1 ] ) << 8;
+    case 1: h ^= uint64_t( data2[ 0 ] );
+        h *= m;
+    };
+
+    h ^= h >> r;
+    h *= m;
+    h ^= h >> r;
+
+    return h;
+}
+
+
+static int getLuaCallStack( lua_State *L, lua_Debug *stacks, int maxDepth )
+{
+    int depth = 0;
+    while ( depth < maxDepth  &&  lua_getstack( L, depth, &(stacks[depth]) ) )
+    {
+        // 'S': fills in the fields source, short_src, linedefined, lastlinedefined, and what; 
+        // 'l': fills in the field currentline; 
+        // 'n': fills in the field name and namewhat; 
+        int status = lua_getinfo( L, "Sln", &(stacks[depth]) );
+        if ( !status )
+            break;
+        ++depth;
+    }
+    return depth;
+}
+
+static void luaCallstackToString( std::string &dump, lua_Debug *callstack, int depth )
+{
+    if (depth == 0)
+    {
+        dump = "<no callstack info (C initializaiton?)>";
+        return;
+    }
+    char buffer[1024];
+    size_t written = 0;
+    for ( int index=0; index < depth; ++index )
+    {
+        lua_Debug &sourceLoc = callstack[index];
+        int len = snprintf( buffer + written, sizeof(buffer) - written, "%s(%d): %s\n", 
+                  sourceLoc.short_src, sourceLoc.currentline, sourceLoc.name ? sourceLoc.name : "?" );
+        if ( len >= 0 )
+        {
+            written += len;
+        }
+        else // buffer too small
+        {
+            break;
+        }
+    }
+    buffer[sizeof(buffer)-1] = 0;
+    dump.assign(buffer);
+}
+
+template <typename T> int normalizedCompare( T val )
+{
+    return ( T( 0 ) < val ) - ( val < T( 0 ) );
+}
 
 struct CustomAllocState
 {
+    CustomAllocState()
+        : allocatedBytes_( 0 )
+        , maxAllocatedBytes_( 0 )
+        , totalAllocCall_( 0 )
+        , captureCallstacks_( false )
+        , L_( NULL )
+    {
+    }
+
+    void captureCallstack( int64_t allocatedSize )
+    {
+        const int stackDepth = 5;
+        lua_Debug callstack[ stackDepth ] = { 0 };
+        int depth = getLuaCallStack( L_, callstack, sizeof(callstack )/sizeof( callstack[0] ) );
+        // Lua string are internalized (one pointer for all strings with same value), 
+        // therefore taking the binary hash of struct containing string pointer and line number work.
+        uint64_t hash = murmur_hash_64( &callstack[ 0 ], sizeof( lua_Debug )*depth );
+        AllocData & data = allocsByCallstack_[hash];
+        data.callCount_ += 1;
+        data.allocatedBytes_ += allocatedSize;
+        if ( data.callStack_.empty() )
+        {
+            luaCallstackToString( data.callStack_, callstack, depth );
+        }
+    }
+
+    enum SortOrder
+    {
+        bySize = 0,
+        byCallCount
+    };
+
+    void printCallstackReport( FILE *fout, SortOrder sortOrder, std::size_t firstN=0 )
+    {
+        std::vector<AllocData *> sites;
+        sites.reserve( allocsByCallstack_.size() );
+        for ( auto &entry: allocsByCallstack_ )
+        {
+            sites.push_back( &(entry.second) );
+        }
+
+        int( *compareAllocDataBy )( const void *a, const void *b ) = &compareAllocDataBySize;
+        const char *order = "by size (in bytes)";
+        if ( sortOrder != bySize )
+        {
+            order = "by call count";
+            compareAllocDataBy = &compareAllocDataByCount;
+        }
+        qsort(sites.data(), sites.size(), sizeof(sites[0]), compareAllocDataBy );
+
+        fprintf( fout, "Memory allocation stack sorted by %s:\n", order );
+        std::size_t limit = firstN == 0 ? sites.size() : firstN;
+        for ( std::size_t index=0; index < limit; ++index )
+        {
+            AllocData &data = *( sites[index] );
+            fprintf( fout, "* %lld bytes for %lld calls: %s", data.allocatedBytes_, data.callCount_, data.callStack_.c_str() );
+        }
+    }
+
+    static int compareAllocDataBySize( const void *a, const void *b )
+    {
+        const CustomAllocState::AllocData *pa = *static_cast<CustomAllocState::AllocData *const*>( a );
+        const CustomAllocState::AllocData *pb = *static_cast<CustomAllocState::AllocData *const*>( b );
+        return -normalizedCompare( pa->allocatedBytes_ - pb->allocatedBytes_ );
+    }
+
+    static int compareAllocDataByCount( const void *a, const void *b )
+    {
+        const CustomAllocState::AllocData *pa = *static_cast<CustomAllocState::AllocData *const*>( a );
+        const CustomAllocState::AllocData *pb = *static_cast<CustomAllocState::AllocData *const*>( b );
+        return -normalizedCompare( pa->callCount_ - pb->callCount_ );
+    }
+
+    void clear()
+    {
+        // reseting everything messup stats as free occurs...
+        //allocatedBytes_ = 0;
+        //maxAllocatedBytes_ = 0;
+        //totalAllocCall_ = 0;
+        allocsByCallstack_.clear();
+    }
+
     int64_t allocatedBytes_;
     int64_t maxAllocatedBytes_;
-    int64_t allocatedObjects_;
     int64_t totalAllocCall_;
-    int64_t totalFreeCall_;
+    lua_State *L_;
+
+    struct AllocData
+    {
+        std::string callStack_;
+        int64_t callCount_;
+        int64_t allocatedBytes_;
+    };
+
+    bool captureCallstacks_;
+
+    typedef std::unordered_map<uint64_t, AllocData> AllocsByCallstack;
+    AllocsByCallstack allocsByCallstack_;
 };
 
-
-CustomAllocState customAllocState = {0,0};
-
+CustomAllocState customAllocState;
+#include <assert.h>
 static void *
 custom_lua_alloc( void *userData, void *ptr, size_t osize, size_t nsize )
 {
@@ -465,15 +663,15 @@ custom_lua_alloc( void *userData, void *ptr, size_t osize, size_t nsize )
         state->maxAllocatedBytes_ = state->allocatedBytes_;
     if ( nsize == 0 )
     {
-        --( state->allocatedObjects_ );
-        state->totalFreeCall_ += 1;
         free( ptr );
         return NULL;
     }
     else
     {
+        // Remarks: nsize may be < osize.
         state->totalAllocCall_ += 1;
-        state->allocatedObjects_ += static_cast<int64_t>( ( osize != 0 ) ? 0 : 1 );
+        if (customAllocState.captureCallstacks_)
+            customAllocState.captureCallstack( static_cast<int64_t>(nsize) - static_cast<int64_t>(osize) );
         return realloc( ptr, nsize );
     }
 }
@@ -508,7 +706,10 @@ int lib_main( int argc, char** argv )
 #else
         lua_State *L = lua_open();
 #endif
-
+#if !defined(NDEBUG)
+        customAllocState.captureCallstacks_ = true;
+        customAllocState.L_ = L;
+#endif
     //    lua_pushlightuserdata( L, (void *)wrap_exceptions );
 /*        static const luaL_Reg lj_lib_load[] = {
             { "",			luaopen_base },
@@ -556,6 +757,8 @@ int lib_main( int argc, char** argv )
         set_lightuserdata_meta_function( L, "demo", "__add", &tluo_meta_add );
         set_lightuserdata_metatable( L, "demo" );
 
+        customAllocState.clear();
+
         std::string filePath;
         if ( argc < 2 )
             filePath = std::string(LUAJIT_POC_DATA_DIR) + "/bench.lua";
@@ -581,8 +784,8 @@ int lib_main( int argc, char** argv )
 #if defined(LUAPOC_USE_CUSTOM_ALLOC)
         printf( "\nCustom Alloc Report:\n" );
         printf( "Bytes currently allocated on heap: 0x%llx bytes, max 0x%llx bytes\n", customAllocState.allocatedBytes_, customAllocState.maxAllocatedBytes_ );
-        printf( "Number of object currently allocated: %lld\n", customAllocState.allocatedObjects_ );
-        printf( "#calls: alloc: %lld, free: %lld (maynot be balanced due to realloc)\n", customAllocState.totalAllocCall_, customAllocState.totalFreeCall_ );
+        printf( "#calls: alloc: %lld\n", customAllocState.totalAllocCall_ );
+        customAllocState.printCallstackReport(stdout, CustomAllocState::bySize, 10);
 #endif
     return 0;
 }
