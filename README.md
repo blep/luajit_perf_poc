@@ -72,6 +72,42 @@ Call C function pointer from a struct returned by another C function exporedt by
 - bench_ffi_setOrigin_via_TestApi * 100,000,000.00 in 0.134s = 746,714,629.24 operation/s [32bits]
 => Fairly similar to directly calling a C function (delta within noise of measurement).
 
+# Trick to pass a function pointer to LUA without FFI #
+
+I initially made a DLL containing C function exposed to LUA via FFI as is documented in the tutorial. But what I really wanted was pass the function pointer directly from my executable to LUA FFI.
+
+Below is the trick I found to expose a C function pointer to LUA JIT FFI without having to use ffi.load() to load it from a dynamic library.
+
+Short story: class LUA binding function returns pointer as a number, which is then casted back to a pointer using ffi.cast().
+
+Classic LUA binding function:
+```
+int clua_Application_getTestApi( lua_State *L )
+{
+    uintptr_t ptr = (uintptr_t)(&testApi);
+    lua_pushinteger( L, ptr ); // even if stored as double, it should be safe as x86 can only address ~48bits.
+    return 1;
+}
+```
+
+LUA code using FFI:
+```
+local ffi = require("ffi")
+ffi.cdef( [[
+    struct TestApi
+    {
+        int( *doPrint1 )( const char *what );
+    };
+
+    typedef struct TestApi *TestApiPtr;
+]] )
+
+local TestApiPtr = ffi.typeof("TestApiPtr")
+local testApi2Num = Application.getTestApi()
+local testApi2 = ffi.cast( TestApiPtr, testApi2Num )
+testApi2.doPrint1( "via Application.getTestApi() cast" )
+```
+
 # Conclusion
 LUA FFI is clearly very interesting to optimize away temporary allocation of vector objects. 
 

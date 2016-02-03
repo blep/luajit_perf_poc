@@ -152,6 +152,13 @@ LUAJITPOC_API struct TestApi *c_Application_getApi()
 
 }
 
+int clua_Application_getTestApi( lua_State *L )
+{
+    uintptr_t ptr = (uintptr_t)(&testApi);
+    lua_pushinteger( L, ptr ); // even if stored as double, it should be safe as x86 can only address ~48bits.
+    return 1;
+}
+
 
 int tluo_Vector2D_call( lua_State *L )
 {
@@ -725,14 +732,6 @@ int lib_main( int argc, char** argv )
             { NULL,		NULL }
         };*/
         luaL_openlibs( L );
-        //luaopen_io( L ); // provides io.*
-        //luaopen_base( L );
-        //luaopen_table( L );
-        //luaopen_string( L );
-        //luaopen_math( L );
-        //luaopen_ffi( L );
-        //luaopen_debug( L );
-        //luaopen_jit( L );
         //    luaopen_loadlib( L );
 
         append_to_lua_path( L, LUAJIT_POC_DATA_DIR );
@@ -741,6 +740,7 @@ int lib_main( int argc, char** argv )
         lua_register( L, "my_function", my_function );
 
         set_module_function( L, "Application", "sayHello", &clua_Application_sayHello );
+        set_module_function( L, "Application", "getTestApi", &clua_Application_getTestApi );
         set_module_function( L, "Application", "now", &clua_Application_now );
         set_module_function( L, "Application", "getOrigin", &clua_Application_getOrigin );
         set_module_function( L, "Application", "setOrigin", &clua_Application_setOrigin );

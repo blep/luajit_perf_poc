@@ -102,6 +102,8 @@ struct TestApi
     void (*setOrigin)( struct CVector2 *newOrigin );
 };
 
+typedef struct TestApi *TestApiPtr;
+
 struct TestApi *c_Application_getApi();
 
   ]] )
@@ -124,6 +126,10 @@ local poclib = ffi.load( "luajit_poc" )
 poclib.c_Application_setOrigin( LuaV2(7,13) )
 local testApi = poclib.c_Application_getApi()
 
+local TestApiPtr = ffi.typeof("TestApiPtr")
+local testApi2Num = Application.getTestApi()
+local testApi2 = ffi.cast( TestApiPtr, testApi2Num )
+
 
 function bench_setLuaV2FFI()
   local v1 = LuaV2(15, 12)
@@ -143,6 +149,8 @@ io.write( "v1.y = ", v1.y, "\n" )
 -- Application.printFFIV2( v1 )
 testApi.doPrint1( "test1" )
 testApi.doPrint2( "test2" )
+
+testApi2.doPrint1( "via Application.getTestApi() cast" )
 
 local nbCreateLoop = 1000*1000*10
 
