@@ -13,7 +13,7 @@ branches:
 # fetch git repository sub-modules
 install:
     - git submodule update --init --recursive
-	
+
 platform:
     - x86
 
