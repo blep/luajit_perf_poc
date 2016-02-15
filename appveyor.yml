@@ -1,0 +1,27 @@
+# AppVeyor file
+# http://www.appveyor.com/docs/appveyor-yml
+
+# clone directory
+clone_folder: c:\projects\luajit_perf_poc
+
+# branches to build
+branches:
+  # whitelist
+  only:
+    - master
+
+platform:
+    - x86
+    - x64
+
+os:
+    - Visual Studio 2015
+
+configuration: Release
+
+build:
+
+build_script:
+ - cd c:\projects\luajit_perf_poc
+ - cmake CMakeLists.txt -G "Visual Studio 11"
+ - msbuild /m /p:Configuration=Release /p:Platform="Win32" LuaJIT_Perf_POC.sln
