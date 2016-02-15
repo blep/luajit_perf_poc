@@ -12,6 +12,8 @@ Then further extended to leverage the LUA JIT Allocation/Sinking optimization do
 http://wiki.luajit.org/Allocation-Sinking-Optimization
 This optimization get ride of allocation of ffi metatype when use is local (temporary vector operation for example).
 
+[![Build status](https://ci.appveyor.com/api/projects/status/rlgjn2jjcxn7yeq3?svg=true)](https://ci.appveyor.com/project/blep/luajit-perf-poc)
+
 # Building
 
 luajit is retrieve from luarocks git repository as a sub-module, so make sure to update sub-modules after clone:
@@ -20,6 +22,7 @@ luajit is retrieve from luarocks git repository as a sub-module, so make sure to
 - Build is done using CMake 3, selecting Visual Studio 2015 64 bits.
 - To test with LUA JIT 2.1, ensure WITH_LUAJIT21 is ON in CMake.
 - If build fail with something related to read, just remove read-line library autodetected by CMake  (just set readline include/lib to a blank string in CMake GUI)
+
 
 # Measure
 
